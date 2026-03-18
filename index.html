@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المحاسب Pro - نظام إدارة فواتير الكهرباء الذكي</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="محاسب Pro">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    
+    <!-- السكريبتات الأساسية -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background-color: #1e3a8a;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand, .nav-link { 
+            color: #fff !important; 
+            transition: color 0.3s ease;
+        }
+        
+        .nav-link:hover { 
+            color: #fbbf24 !important; 
+        }
+        
+        .card {
+            border: none; 
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background-color: #fff; 
+            border-bottom: 2px solid #f4f6f9;
+            font-weight: bold; 
+            border-radius: 12px 12px 0 0 !important;
+        }
+        
+        .page-section { 
+            display: none; 
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .page-section.active { 
+            display: block; 
+            opacity: 1;
+        }
+        
+        .table-responsive { 
+            border-radius: 10px; 
+            overflow: auto; 
+        }
+        
+        .table th { 
+            background-color: #1e3a8a; 
+            color: white; 
+            white-space: nowrap; 
+        }
+        
+        .table td { 
+            vertical-align: middle; 
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            text-align: center;
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card h3 { 
+            font-size: 2rem; 
+            margin-top: 10px; 
+            font-weight: bold; 
+        }
+        
+        .preview-container {
+            background: #fff; 
+            padding: 30px; 
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            margin: auto; 
+            max-width: 900px; 
+            color: #000;
+        }
+        
+        .print-header { 
+            text-align: center; 
+            border-bottom: 2px solid #000; 
+            padding-bottom: 10px; 
+            margin-bottom: 20px; 
+        }
+        
+        .warning-message {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        @media print {
+            body * { visibility: hidden; }
+            #unifiedPreviewBody, #unifiedPreviewBody * { visibility: visible; }
+            #unifiedPreviewBody { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                background: white; 
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .table-responsive table { min-width: 1200px; }
+            .stat-card { margin-bottom: 15px; }
+        }
+
+        .install-instructions {
+            background: #e8f4fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            text-align: right;
+        }
+
+        .install-instructions ol {
+            padding-right: 20px;
+            margin-top: 10px;
+        }
+
+        .install-instructions li {
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            border: none;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #047857 0%, #059669 100%);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#"><i class="fa-solid fa-bolt text-warning"></i> المحاسب Pro للكهرباء</a>
+            <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('dashboard')"><i class="fa-solid fa-chart-pie"></i> الرئيسية</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('subscribers')"><i class="fa-solid fa-users"></i> المشتركون</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('readings')"><i class="fa-solid fa-file-invoice"></i> القراءات والفواتير</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('accounts')"><i class="fa-solid fa-wallet"></i> كشوف الحسابات</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('settings')"><i class="fa-solid fa-cogs"></i> الإعدادات</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        
+        <!-- لوحة التحكم الرئيسية -->
+        <div id="dashboard" class="page-section active">
+            <h2 class="mb-4 fw-bold text-primary"><i class="fa-solid fa-chart-line"></i> التحليلات ولوحة القيادة</h2>
+            
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <div class="stat-card">
+                        <i class="fa-solid fa-users fa-2x mb-2"></i>
+                        <h5>إجمالي المشتركين</h5>
+                        <h3 id="dash-subs-count">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #047857 0%, #10b981 100%);">
+                        <i class="fa-solid fa-coins fa-2x mb-2"></i>
+                        <h5>الديون المستحقة</h5>
+                        <h3 id="dash-total-debt">0 ل.س</h3>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%);">
+                        <i class="fa-solid fa-calendar-check fa-2x mb-2"></i>
+                        <h5>الأشهر المسجلة</h5>
+                        <h3 id="dash-months-count">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #6b21a8 0%, #a855f7 100%);">
+                        <i class="fa-solid fa-clock fa-2x mb-2"></i>
+                        <h5>الدورة القادمة</h5>
+                        <h3 id="dash-cycle-status" class="fs-5 mt-2">جاري الحساب...</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-2">
+                <div class="col-md-12 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-dark text-white"><i class="fa-solid fa-chart-column"></i> الأكثر استهلاكاً (آخر شهر)</div>
+                        <div class="card-body">
+                            <div class="chart-container" style="height: 300px;">
+                                <canvas id="topConsumersChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- المشتركين -->
+        <div id="subscribers" class="page-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>إدارة المشتركين</h2>
+                <button class="btn btn-primary" onclick="openSubModal()"><i class="fa-solid fa-plus"></i> إضافة مشترك جديد</button>
+            </div>
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 text-center align-middle">
+                            <thead>
+                                <tr>
+                                    <th>الاسم</th><th>الجوال</th><th>المحول</th><th>القراءة الأولية</th><th>الرصيد</th><th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subs-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- القراءات -->
+        <div id="readings" class="page-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>إدخال القراءات</h2>
+                <div class="d-flex gap-2">
+                    <select id="month-select" class="form-select w-auto" onchange="loadMonthData()"></select>
+                    <button class="btn btn-success" onclick="createNewMonth()"><i class="fa-solid fa-plus"></i> شهر جديد</button>
+                </div>
+            </div>
+
+            <div id="readings-content" style="display:none;">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">قراءات المحول (المعامل: <span id="lbl-trans-mult"></span>)</div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6"><label>السابقة</label><input type="number" id="trans-prev" class="form-control" oninput="calculateCurrentMonth()"></div>
+                                    <div class="col-6"><label>الحالية</label><input type="number" id="trans-curr" class="form-control" oninput="calculateCurrentMonth()"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-danger">
+                            <div class="card-header bg-danger text-white">العداد الرئيسي (المعامل: <span id="lbl-main-mult"></span>)</div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6"><label>السابقة</label><input type="number" id="main-prev" class="form-control" oninput="calculateCurrentMonth()"></div>
+                                    <div class="col-6"><label>الحالية</label><input type="number" id="main-curr" class="form-control" oninput="calculateCurrentMonth()"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>سعر الكيلو:</strong> <span id="lbl-kwh-price"></span> ل.س
+                    <button class="btn btn-sm btn-warning ms-2" onclick="editMonthPrice()">تعديل</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <span>قراءات المشتركين</span>
+                        <button class="btn btn-sm btn-warning" onclick="toggleManualEdit()">
+                            <i class="fa-solid fa-pencil"></i> تعديل يدوي
+                        </button>
+                    </div>
+                    <div id="manual-warning" class="warning-message m-3">
+                        <i class="fa-solid fa-exclamation-triangle"></i> تحذير: التعديل اليدوي قد يسبب أخطاء
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered text-center align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>المشترك</th>
+                                        <th>الحالية</th>
+                                        <th>السابقة</th>
+                                        <th>الاستهلاك</th>
+                                        <th>الإجمالي</th>
+                                        <th>المطلوب</th>
+                                        <th>إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="readings-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" onclick="saveMonthData()">حفظ</button>
+                        <button class="btn btn-info" onclick="exportFullMonthlyReport()">تقرير شهري</button>
+                    </div>
+                </div>
+            </div>
+            <div id="no-month-msg" class="alert alert-warning">لا يوجد شهر محدد</div>
+        </div>
+
+        <!-- كشوف الحساب -->
+        <div id="accounts" class="page-section">
+            <h2 class="mb-4">كشف حساب مشترك</h2>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <select id="acc-sub-select" class="form-select form-select-lg" onchange="renderAccount()"></select>
+                </div>
+            </div>
+
+            <div id="account-content" style="display:none;">
+                <div class="row mb-3">
+                    <div class="col-md-4"><div class="alert alert-secondary"><strong>المشترك:</strong> <span id="acc-name"></span></div></div>
+                    <div class="col-md-4"><div class="alert alert-secondary"><strong>الجوال:</strong> <span id="acc-phone"></span></div></div>
+                    <div class="col-md-4"><div class="alert alert-danger"><strong>الرصيد:</strong> <span id="acc-balance"></span> ل.س</div></div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped text-center align-middle mb-0">
+                                <thead class="table-dark">
+                                    <tr><th>البيان</th><th>النوع</th><th>المطلوب</th><th>المدفوع</th><th>إجراءات</th></tr>
+                                </thead>
+                                <tbody id="acc-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-success" onclick="openPaymentModal()">تسجيل دفعة</button>
+                        <button class="btn btn-info" onclick="exportAccountStatement()">تصدير كشف</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- الإعدادات -->
+        <div id="settings" class="page-section">
+            <h2 class="mb-4">الإعدادات</h2>
+            
+            <!-- قسم تثبيت التطبيق -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-info shadow-sm">
+                        <div class="card-header bg-info text-white fw-bold">
+                            <i class="fa-solid fa-mobile-screen-button"></i> تثبيت التطبيق (PWA)
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <div class="install-instructions">
+                                        <h5 class="mb-3"><i class="fa-solid fa-circle-info text-info"></i> طريقة التثبيت:</h5>
+                                        <ol class="text-muted">
+                                            <li><i class="fa-solid fa-1 text-primary ms-2"></i> اضغط على زر التثبيت أدناه</li>
+                                            <li><i class="fa-solid fa-2 text-primary ms-2"></i> اختر "تثبيت" أو "إضافة للشاشة الرئيسية"</li>
+                                            <li><i class="fa-solid fa-3 text-primary ms-2"></i> سيظهر أيقونة التطبيق على سطح المكتب</li>
+                                            <li><i class="fa-solid fa-4 text-primary ms-2"></i> يمكنك فتحه كتطبيق مستقل بدون متصفح</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <button id="installAppBtn" class="btn btn-success btn-lg fw-bold px-4 py-3 d-none">
+                                        <i class="fa-solid fa-download fa-bounce"></i> تثبيت التطبيق الآن
+                                    </button>
+                                    <div id="installAppMsg" class="alert alert-success d-none">
+                                        <i class="fa-solid fa-check-circle fa-2x"></i>
+                                        <p class="mb-0 mt-2">التطبيق مثبت ومستخدم</p>
+                                    </div>
+                                    <div id="installNotSupportedMsg" class="alert alert-warning d-none">
+                                        <i class="fa-solid fa-exclamation-triangle"></i>
+                                        <p class="mb-0 mt-2">المتصفح لا يدعم التثبيت</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Google Drive Integration -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-success">
+                        <div class="card-header bg-success text-white">
+                            <i class="fa-brands fa-google-drive"></i> Google Drive - مزامنة سهلة
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fa-solid fa-check-circle"></i> تم تفعيل Google Drive تلقائياً - فقط اضغط على الأزرار أدناه
+                            </div>
+                            
+                            <div class="row text-center">
+                                <div class="col-md-6 mb-3">
+                                    <button class="btn btn-primary btn-lg w-100" onclick="saveToDrive()">
+                                        <i class="fa-brands fa-google-drive"></i> حفظ إلى Google Drive
+                                    </button>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <button class="btn btn-info btn-lg w-100 text-white" onclick="loadFromDrive()">
+                                        <i class="fa-brands fa-google-drive"></i> استعادة من Google Drive
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center text-muted small mt-2">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> يتم الحفظ والاستعادة بسهولة - اضغط على الزر المطلوب
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- إعدادات التسعير -->
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-dark text-white">إعدادات التسعير</div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label>السعر الافتراضي للكيلو</label>
+                                <input type="number" id="set-price" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label>معامل المحول</label>
+                                <input type="number" id="set-trans-mult" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label>معامل العداد الرئيسي</label>
+                                <input type="number" id="set-main-mult" class="form-control">
+                            </div>
+                            <button class="btn btn-primary w-100" onclick="saveSettings()">حفظ</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- النسخ الاحتياطي -->
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-dark text-white">نسخ احتياطي</div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success" onclick="exportBackup()">
+                                    <i class="fa-solid fa-download"></i> تحميل نسخة احتياطية
+                                </button>
+                                
+                                <div class="input-group mt-3">
+                                    <input type="file" id="backup-file" class="form-control" accept=".json">
+                                    <button class="btn btn-danger" onclick="importBackup()">
+                                        <i class="fa-solid fa-upload"></i> استعادة
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- النوافذ المنبثقة -->
+    <div class="modal fade" id="unifiedExportModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="fa-solid fa-eye"></i> معاينة المستند</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
+                    <div id="unifiedPreviewBody" class="preview-container"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-success" id="btn-export-whatsapp"><i class="fa-brands fa-whatsapp"></i> مشاركة</button>
+                    <button class="btn btn-primary" id="btn-export-print"><i class="fa-solid fa-print"></i> طباعة</button>
+                    <button class="btn btn-danger" id="btn-export-pdf"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="subModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">بيانات المشترك</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="sub-id">
+                    <div class="mb-2"><label>الاسم</label><input type="text" id="sub-name" class="form-control"></div>
+                    <div class="mb-2"><label>الجوال</label><input type="text" id="sub-phone" class="form-control"></div>
+                    <div class="mb-2"><label>معامل المحول</label><input type="number" id="sub-mult" class="form-control" value="1"></div>
+                    <div class="mb-2"><label>المياه الثابتة</label><input type="number" id="sub-water" class="form-control" value="0"></div>
+                    <div class="mb-2"><label>القراءة الأولية</label><input type="number" id="sub-initial" class="form-control" value="0"></div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="sub-waste" checked>
+                        <label>يتحمل هدر</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="sub-diff" checked>
+                        <label>يتحمل فرق</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="saveSubscriber()">حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="paymentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">تسجيل دفعة</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2"><label>المبلغ</label><input type="number" id="pay-amount" class="form-control"></div>
+                    <div class="mb-2"><label>التاريخ</label><input type="date" id="pay-date" class="form-control"></div>
+                    <div class="mb-2"><label>البيان</label><input type="text" id="pay-note" class="form-control" value="دفعة"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" onclick="savePayment()">حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== الثوابت والإعدادات ==========
+        const MY_GOOGLE_CLIENT_ID = "641779202890-iuo6gmu0p2tdcor49ajuhnfg525mg6np.apps.googleusercontent.com";
+        const MY_GOOGLE_API_KEY = "AIzaSyC3sr26t1c6ATlK2-O5WcamsXPf6undvVE";
+        
+        // ========== تهيئة قاعدة البيانات ==========
+        let db = {
+            settings: { 
+                price: 1900, 
+                transMult: 1000, 
+                mainMult: 200,
+                print: { 
+                    headerColor: "#1e3a8a", 
+                    headerText: "نظام فواتير الكهرباء",
+                    logoWidth: 150
+                }
+            },
+            subscribers: [],
+            months: [],
+            readings: [],
+            payments: []
+        };
+
+        // تحميل البيانات المحفوظة
+        try {
+            const saved = localStorage.getItem('elec_db');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                db = { ...db, ...parsed };
+            }
+        } catch (e) {
+            console.log('خطأ في تحميل البيانات:', e);
+        }
+
+        // ========== متغيرات عامة ==========
+        let deferredPrompt;
+        let topChartInstance = null;
+        let manualEditMode = false;
+        let currentExportPayload = {};
+
+        // تهيئة النوافذ المنبثقة
+        const modals = {
+            sub: new bootstrap.Modal(document.getElementById('subModal')),
+            payment: new bootstrap.Modal(document.getElementById('paymentModal')),
+            unified: new bootstrap.Modal(document.getElementById('unifiedExportModal'))
+        };
+
+        // ========== PWA Installation ==========
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            const installBtn = document.getElementById('installAppBtn');
+            const installMsg = document.getElementById('installAppMsg');
+            const notSupportedMsg = document.getElementById('installNotSupportedMsg');
+            
+            if (installBtn && !window.matchMedia('(display-mode: standalone)').matches) {
+                installBtn.classList.remove('d-none');
+                installMsg.classList.add('d-none');
+                notSupportedMsg.classList.add('d-none');
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            const installBtn = document.getElementById('installAppBtn');
+            const installMsg = document.getElementById('installAppMsg');
+            
+            installBtn.classList.add('d-none');
+            installMsg.classList.remove('d-none');
+        });
+
+        // زر التثبيت
+        document.getElementById('installAppBtn')?.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                await deferredPrompt.userChoice;
+                deferredPrompt = null;
+            }
+        });
+
+        // التحقق من حالة التثبيت عند التحميل
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            const installBtn = document.getElementById('installAppBtn');
+            const installMsg = document.getElementById('installAppMsg');
+            if (installBtn && installMsg) {
+                installBtn.classList.add('d-none');
+                installMsg.classList.remove('d-none');
+            }
+        }
+
+        // ========== Google Drive Initialization ==========
+        function initGoogleApi() {
+            try {
+                gapi.load('client:auth2', {
+                    callback: function() {
+                        gapi.client.init({
+                            apiKey: MY_GOOGLE_API_KEY,
+                            clientId: MY_GOOGLE_CLIENT_ID,
+                            scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
+                            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
+                        }).then(function() {
+                            console.log('Google API initialized successfully');
+                        }).catch(function(error) {
+                            console.log('Google API init error:', error);
+                        });
+                    },
+                    onerror: function() {
+                        console.log('Failed to load Google API');
+                    }
+                });
+            } catch (e) {
+                console.log('Google API error:', e);
+            }
+        }
+
+        // تشغيل Google API
+        initGoogleApi();
+
+        // ========== دوال Google Drive ==========
+        function getAuthToken(interactive, callback) {
+            try {
+                const auth = gapi.auth2.getAuthInstance();
+                if (auth && auth.isSignedIn.get()) {
+                    callback(auth.currentUser.get().getAuthResponse().access_token);
+                } else if (interactive) {
+                    gapi.auth2.getAuthInstance().signIn().then(() => {
+                        callback(gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token);
+                    }).catch(() => {
+                        alert('فشل تسجيل الدخول إلى Google');
+                    });
+                } else {
+                    callback(null);
+                }
+            } catch (e) {
+                console.log('Auth error:', e);
+                alert('خطأ في الاتصال بـ Google');
+            }
+        }
+
+        // حفظ إلى Google Drive
+        window.saveToDrive = function() {
+            try {
+                getAuthToken(true, function(token) {
+                    if (!token) {
+                        alert('الرجاء تسجيل الدخول أولاً');
+                        return;
+                    }
+
+                    const jsonStr = JSON.stringify(db, null, 2);
+                    const blob = new Blob([jsonStr], { type: 'application/json' });
+                    const file = new File([blob], `نسخة_كهرباء_${new Date().toISOString().slice(0,10)}.json`, { type: 'application/json' });
+
+                    const metadata = {
+                        name: file.name,
+                        mimeType: 'application/json',
+                        parents: ['root']
+                    };
+
+                    const form = new FormData();
+                    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                    form.append('file', file);
+
+                    fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                        method: 'POST',
+                        headers: new Headers({ 'Authorization': 'Bearer ' + token }),
+                        body: form
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.id) {
+                            alert('✅ تم الحفظ بنجاح في Google Drive');
+                        } else {
+                            alert('❌ فشل الحفظ: ' + (data.error?.message || 'خطأ غير معروف'));
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('❌ فشل الاتصال بـ Google Drive');
+                    });
+                });
+            } catch (e) {
+                alert('حدث خطأ، يرجى المحاولة مرة أخرى');
+            }
+        };
+
+        // استعادة من Google Drive
+        window.loadFromDrive = function() {
+            try {
+                getAuthToken(true, function(token) {
+                    if (!token) return;
+
+                    // إنشاء منتقي الملفات
+                    const picker = new google.picker.PickerBuilder()
+                        .addView(new google.picker.DocsView()
+                            .setMimeTypes('application/json')
+                            .setIncludeFolders(true))
+                        .setOAuthToken(token)
+                        .setDeveloperKey(MY_GOOGLE_API_KEY)
+                        .setCallback(function(data) {
+                            if (data.action === google.picker.Action.PICKED) {
+                                const fileId = data.docs[0].id;
+                                
+                                // تحميل الملف
+                                gapi.client.drive.files.get({
+                                    fileId: fileId,
+                                    alt: 'media'
+                                }).then(function(resp) {
+                                    try {
+                                        const importedDb = JSON.parse(resp.body);
+                                        db = importedDb;
+                                        localStorage.setItem('elec_db', JSON.stringify(db));
+                                        alert('✅ تم استعادة البيانات بنجاح');
+                                        location.reload();
+                                    } catch (e) {
+                                        alert('❌ الملف غير صالح');
+                                    }
+                                }).catch(function(err) {
+                                    alert('❌ فشل تحميل الملف');
+                                });
+                            }
+                        })
+                        .build();
+                    
+                    picker.setVisible(true);
+                });
+            } catch (e) {
+                alert('حدث خطأ في فتح منتقي الملفات');
+            }
+        };
+
+        // ========== دوال حفظ البيانات ==========
+        function saveData() {
+            localStorage.setItem('elec_db', JSON.stringify(db));
+        }
+
+        // ========== التنقل بين الصفحات ==========
+        window.showPage = function(pageId) {
+            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            if (pageId === 'dashboard') updateDashboardAnalytics();
+            if (pageId === 'subscribers') renderSubs();
+            if (pageId === 'readings') initReadingsPage();
+            if (pageId === 'accounts') initAccountsPage();
+            if (pageId === 'settings') renderSettings();
+        };
+
+        // ========== دوال مساعدة ==========
+        function formatMoney(num) {
+            return Number(num || 0).toLocaleString('en-US');
+        }
+
+        function formatNum(num) {
+            return Number(num || 0).toFixed(2).replace(/\.00$/, '');
+        }
+
+        function getSubBalance(subId) {
+            let totalBilled = 0, totalPaid = 0;
+            db.readings.filter(r => r.subId === subId).forEach(r => totalBilled += (r.amount || 0));
+            db.payments.filter(p => p.subId === subId).forEach(p => totalPaid += p.amount);
+            return totalBilled - totalPaid;
+        }
+
+        // ========== لوحة التحكم ==========
+        function updateDashboardAnalytics() {
+            document.getElementById('dash-subs-count').innerText = db.subscribers.length;
+            document.getElementById('dash-months-count').innerText = db.months.length;
+            
+            let totalDebt = 0;
+            db.subscribers.forEach(sub => {
+                let bal = getSubBalance(sub.id);
+                if(bal > 0) totalDebt += bal;
+            });
+            document.getElementById('dash-total-debt').innerText = formatMoney(totalDebt) + ' ل.س';
+
+            // حالة الدورة
+            if(db.months.length > 0) {
+                let lastDate = new Date(db.months[db.months.length-1].date || Date.now());
+                let today = new Date();
+                let diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+                document.getElementById('dash-cycle-status').innerHTML = `متبقي ${30 - diffDays} يوم`;
+            }
+
+            // رسم بياني
+            if(db.months.length > 0) {
+                let lastMId = db.months[db.months.length - 1].id;
+                let topReads = db.readings.filter(r => r.monthId === lastMId)
+                    .sort((a,b) => (b.totalKwh||0) - (a.totalKwh||0)).slice(0, 5);
+                
+                let labels = topReads.map(r => {
+                    let s = db.subscribers.find(x => x.id === r.subId);
+                    return s ? s.name : 'مجهول';
+                });
+                let dataKwh = topReads.map(r => r.totalKwh || 0);
+
+                if(topChartInstance) topChartInstance.destroy();
+                
+                let ctx = document.getElementById('topConsumersChart')?.getContext('2d');
+                if(ctx) {
+                    topChartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'الاستهلاك (Kwh)',
+                                data: dataKwh,
+                                backgroundColor: '#3b82f6'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: { y: { beginAtZero: true } }
+                        }
+                    });
+                }
+            }
+        }
+
+        // ========== المشتركين ==========
+        function renderSubs() {
+            const tbody = document.getElementById('subs-tbody');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            db.subscribers.forEach(sub => {
+                let balance = getSubBalance(sub.id);
+                tbody.innerHTML += `<tr>
+                    <td class="fw-bold">${sub.name}</td>
+                    <td>${sub.phone || '-'}</td>
+                    <td>${sub.mult}</td>
+                    <td>${sub.initialReading || 0}</td>
+                    <td class="${balance > 0 ? 'text-danger fw-bold' : ''}">${formatMoney(balance)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="editSub('${sub.id}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteSub('${sub.id}')"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        window.openSubModal = function() {
+            document.getElementById('sub-id').value = '';
+            document.getElementById('sub-name').value = '';
+            document.getElementById('sub-phone').value = '';
+            document.getElementById('sub-mult').value = '1';
+            document.getElementById('sub-water').value = '0';
+            document.getElementById('sub-initial').value = '0';
+            document.getElementById('sub-waste').checked = true;
+            document.getElementById('sub-diff').checked = true;
+            modals.sub.show();
+        };
+
+        window.editSub = function(id) {
+            const s = db.subscribers.find(x => x.id === id);
+            if(s) {
+                document.getElementById('sub-id').value = s.id;
+                document.getElementById('sub-name').value = s.name;
+                document.getElementById('sub-phone').value = s.phone || '';
+                document.getElementById('sub-mult').value = s.mult;
+                document.getElementById('sub-water').value = s.water || 0;
+                document.getElementById('sub-initial').value = s.initialReading || 0;
+                document.getElementById('sub-waste').checked = s.shareWaste !== false;
+                document.getElementById('sub-diff').checked = s.shareDiff !== false;
+                modals.sub.show();
+            }
+        };
+
+        window.saveSubscriber = function() {
+            const id = document.getElementById('sub-id').value;
+            const subData = {
+                id: id || 'sub' + Date.now(),
+                name: document.getElementById('sub-name').value.trim(),
+                phone: document.getElementById('sub-phone').value.trim(),
+                mult: parseFloat(document.getElementById('sub-mult').value) || 1,
+                water: parseFloat(document.getElementById('sub-water').value) || 0,
+                initialReading: parseFloat(document.getElementById('sub-initial').value) || 0,
+                shareWaste: document.getElementById('sub-waste').checked,
+                shareDiff: document.getElementById('sub-diff').checked
+            };
+
+            if (!subData.name) {
+                alert('الرجاء إدخال الاسم');
+                return;
+            }
+
+            if (id) {
+                const index = db.subscribers.findIndex(s => s.id === id);
+                if (index !== -1) db.subscribers[index] = subData;
+            } else {
+                db.subscribers.push(subData);
+            }
+
+            saveData();
+            modals.sub.hide();
+            renderSubs();
+        };
+
+        window.deleteSub = function(id) {
+            if (confirm('هل أنت متأكد من حذف هذا المشترك؟')) {
+                db.subscribers = db.subscribers.filter(s => s.id !== id);
+                db.readings = db.readings.filter(r => r.subId !== id);
+                db.payments = db.payments.filter(p => p.subId !== id);
+                saveData();
+                renderSubs();
+            }
+        };
+
+        // ========== القراءات ==========
+        function initReadingsPage() {
+            document.getElementById('lbl-trans-mult').innerText = db.settings.transMult;
+            document.getElementById('lbl-main-mult').innerText = db.settings.mainMult;
+            
+            const sel = document.getElementById('month-select');
+            sel.innerHTML = '<option value="">اختر الشهر</option>';
+            db.months.forEach(m => {
+                sel.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+            });
+
+            if (db.months.length > 0) {
+                sel.value = db.months[db.months.length - 1].id;
+                loadMonthData();
+            } else {
+                document.getElementById('readings-content').style.display = 'none';
+                document.getElementById('no-month-msg').style.display = 'block';
+            }
+        }
+
+        window.createNewMonth = function() {
+            const name = prompt('أدخل اسم الشهر الجديد:');
+            if (!name) return;
+
+            const price = prompt('سعر الكيلو لهذا الشهر:', db.settings.price);
+            const monthPrice = price ? parseFloat(price) : db.settings.price;
+
+            const mId = 'month' + Date.now();
+            let lastT = 0, lastM = 0;
+
+            if (db.months.length > 0) {
+                let lm = db.months[db.months.length - 1];
+                lastT = lm.transCurr || 0;
+                lastM = lm.mainCurr || 0;
+            }
+
+            db.months.push({
+                id: mId,
+                name: name,
+                price: monthPrice,
+                transPrev: lastT,
+                transCurr: lastT,
+                mainPrev: lastM,
+                mainCurr: lastM,
+                date: new Date().toISOString()
+            });
+
+            // إنشاء قراءات للمشتركين
+            db.subscribers.forEach(sub => {
+                let prevReadings = db.readings.filter(r => r.subId === sub.id)
+                    .sort((a,b) => b.monthId.localeCompare(a.monthId));
+                let lastCurr = prevReadings.length > 0 ? prevReadings[0].curr : (sub.initialReading || 0);
+
+                db.readings.push({
+                    id: 'read' + sub.id + mId,
+                    monthId: mId,
+                    subId: sub.id,
+                    prev: lastCurr,
+                    curr: lastCurr,
+                    adjustment: 0,
+                    fines: 0,
+                    cons: 0,
+                    shareWaste: 0,
+                    shareDiff: 0,
+                    totalKwh: 0,
+                    amount: 0
+                });
+            });
+
+            saveData();
+            initReadingsPage();
+        };
+
+        window.loadMonthData = function() {
+            const mId = document.getElementById('month-select').value;
+            if (!mId) {
+                document.getElementById('readings-content').style.display = 'none';
+                document.getElementById('no-month-msg').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('readings-content').style.display = 'block';
+            document.getElementById('no-month-msg').style.display = 'none';
+
+            const m = db.months.find(x => x.id === mId);
+            if (m) {
+                document.getElementById('trans-prev').value = m.transPrev || 0;
+                document.getElementById('trans-curr').value = m.transCurr || 0;
+                document.getElementById('main-prev').value = m.mainPrev || 0;
+                document.getElementById('main-curr').value = m.mainCurr || 0;
+                document.getElementById('lbl-kwh-price').innerText = m.price || db.settings.price;
+            }
+
+            const tbody = document.getElementById('readings-tbody');
+            tbody.innerHTML = '';
+
+            db.subscribers.forEach(sub => {
+                let r = db.readings.find(x => x.monthId === mId && x.subId === sub.id);
+                tbody.innerHTML += `<tr>
+                    <td class="fw-bold">${sub.name}</td>
+                    <td><input type="number" class="form-control form-control-sm in-curr" data-sub="${sub.id}" value="${r ? r.curr : 0}" oninput="calculateCurrentMonth()"></td>
+                    <td><input type="number" class="form-control form-control-sm in-prev" value="${r ? r.prev : 0}" ${manualEditMode ? '' : 'readonly'}></td>
+                    <td class="out-cons fw-bold">0</td>
+                    <td class="out-totalkwh text-primary fw-bold">0</td>
+                    <td class="out-amount bg-warning fw-bold">0</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="exportSingleReading('${sub.id}','${mId}')">
+                            <i class="fa-solid fa-file-export"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            });
+
+            calculateCurrentMonth();
+        };
+
+        window.calculateCurrentMonth = function() {
+            const mId = document.getElementById('month-select').value;
+            if (!mId) return null;
+
+            const month = db.months.find(m => m.id === mId);
+            const price = month ? (month.price || db.settings.price) : db.settings.price;
+
+            const transPrev = parseFloat(document.getElementById('trans-prev').value) || 0;
+            const transCurr = parseFloat(document.getElementById('trans-curr').value) || 0;
+            const mainPrev = parseFloat(document.getElementById('main-prev').value) || 0;
+            const mainCurr = parseFloat(document.getElementById('main-curr').value) || 0;
+
+            const transCons = Math.max(0, (transCurr - transPrev) * db.settings.transMult);
+            const mainCons = Math.max(0, (mainCurr - mainPrev) * db.settings.mainMult);
+            const meterDiff = Math.max(0, transCons - mainCons);
+
+            let subsList = [];
+            let totalCons = 0;
+
+            document.querySelectorAll('#readings-tbody tr').forEach(tr => {
+                const subId = tr.querySelector('.in-curr')?.getAttribute('data-sub');
+                const sub = db.subscribers.find(s => s.id === subId);
+                if (!sub) return;
+
+                const curr = parseFloat(tr.querySelector('.in-curr').value) || 0;
+                const prev = parseFloat(tr.querySelector('.in-prev').value) || 0;
+                const cons = Math.max(0, (curr - prev) * sub.mult);
+
+                tr.querySelector('.out-cons').innerText = formatNum(cons);
+                tr.querySelector('.out-totalkwh').innerText = formatNum(cons);
+                
+                const amount = (cons * price) + (sub.water || 0);
+                tr.querySelector('.out-amount').innerText = formatMoney(Math.round(amount));
+
+                totalCons += cons;
+                
+                subsList.push({
+                    sub,
+                    prev,
+                    curr,
+                    cons,
+                    amount: Math.round(amount)
+                });
+            });
+
+            return subsList;
+        };
+
+        window.saveMonthData = function() {
+            const mId = document.getElementById('month-select').value;
+            if (!mId) return;
+
+            // تحديث بيانات الشهر
+            const month = db.months.find(m => m.id === mId);
+            if (month) {
+                month.transPrev = parseFloat(document.getElementById('trans-prev').value) || 0;
+                month.transCurr = parseFloat(document.getElementById('trans-curr').value) || 0;
+                month.mainPrev = parseFloat(document.getElementById('main-prev').value) || 0;
+                month.mainCurr = parseFloat(document.getElementById('main-curr').value) || 0;
+            }
+
+            // تحديث قراءات المشتركين
+            document.querySelectorAll('#readings-tbody tr').forEach(tr => {
+                const subId = tr.querySelector('.in-curr')?.getAttribute('data-sub');
+                const sub = db.subscribers.find(s => s.id === subId);
+                if (!sub) return;
+
+                const curr = parseFloat(tr.querySelector('.in-curr').value) || 0;
+                const prev = parseFloat(tr.querySelector('.in-prev').value) || 0;
+                const cons = Math.max(0, (curr - prev) * sub.mult);
+                const amountText = tr.querySelector('.out-amount').innerText.replace(/,/g, '');
+                const amount = parseFloat(amountText) || 0;
+
+                let reading = db.readings.find(x => x.monthId === mId && x.subId === subId);
+                if (reading) {
+                    reading.curr = curr;
+                    reading.prev = prev;
+                    reading.cons = cons;
+                    reading.totalKwh = cons;
+                    reading.amount = amount;
+                }
+            });
+
+            saveData();
+            alert('تم حفظ البيانات بنجاح');
+        };
+
+        window.editMonthPrice = function() {
+            const mId = document.getElementById('month-select').value;
+            const month = db.months.find(m => m.id === mId);
+            if (!month) return;
+
+            const newPrice = prompt('أدخل السعر الجديد:', month.price || db.settings.price);
+            if (newPrice && !isNaN(newPrice)) {
+                month.price = parseFloat(newPrice);
+                saveData();
+                loadMonthData();
+            }
+        };
+
+        window.toggleManualEdit = function() {
+            manualEditMode = !manualEditMode;
+            document.querySelectorAll('.in-prev').forEach(inp => {
+                if (manualEditMode) inp.removeAttribute('readonly');
+                else inp.setAttribute('readonly', true);
+            });
+            document.getElementById('manual-warning').style.display = manualEditMode ? 'block' : 'none';
+        };
+
+        // ========== كشوف الحساب ==========
+        function initAccountsPage() {
+            const sel = document.getElementById('acc-sub-select');
+            sel.innerHTML = '<option value="">اختر المشترك</option>';
+            db.subscribers.forEach(s => {
+                sel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+            });
+        }
+
+        window.renderAccount = function() {
+            const id = document.getElementById('acc-sub-select').value;
+            if (!id) {
+                document.getElementById('account-content').style.display = 'none';
+                return;
+            }
+
+            const sub = db.subscribers.find(s => s.id === id);
+            document.getElementById('acc-name').innerText = sub.name;
+            document.getElementById('acc-phone').innerText = sub.phone || '-';
+            document.getElementById('acc-balance').innerText = formatMoney(getSubBalance(id));
+            document.getElementById('account-content').style.display = 'block';
+
+            let entries = [];
+            
+            // الفواتير
+            db.readings.filter(r => r.subId === id && r.amount > 0).forEach(r => {
+                let m = db.months.find(x => x.id === r.monthId);
+                entries.push({
+                    desc: `فاتورة ${m ? m.name : ''}`,
+                    type: 'فاتورة',
+                    req: r.amount,
+                    paid: 0,
+                    sort: m ? m.id : ''
+                });
+            });
+
+            // المدفوعات
+            db.payments.filter(p => p.subId === id).forEach(p => {
+                entries.push({
+                    desc: p.date + ' - ' + p.note,
+                    type: 'دفعة',
+                    req: 0,
+                    paid: p.amount,
+                    sort: p.id
+                });
+            });
+
+            entries.sort((a,b) => a.sort.localeCompare(b.sort));
+
+            const tbody = document.getElementById('acc-tbody');
+            tbody.innerHTML = '';
+            entries.forEach(e => {
+                tbody.innerHTML += `<tr>
+                    <td>${e.desc}</td>
+                    <td><span class="badge ${e.type === 'فاتورة' ? 'bg-danger' : 'bg-success'}">${e.type}</span></td>
+                    <td class="text-danger">${e.req > 0 ? formatMoney(e.req) : '-'}</td>
+                    <td class="text-success">${e.paid > 0 ? formatMoney(e.paid) : '-'}</td>
+                    <td>-</td>
+                </tr>`;
+            });
+        };
+
+        window.openPaymentModal = function() {
+            document.getElementById('pay-amount').value = '';
+            document.getElementById('pay-date').valueAsDate = new Date();
+            document.getElementById('pay-note').value = 'دفعة نقدية';
+            modals.payment.show();
+        };
+
+        window.savePayment = function() {
+            const amount = parseFloat(document.getElementById('pay-amount').value);
+            if (!amount || amount <= 0) {
+                alert('الرجاء إدخال مبلغ صحيح');
+                return;
+            }
+
+            db.payments.push({
+                id: 'pay' + Date.now(),
+                subId: document.getElementById('acc-sub-select').value,
+                amount: amount,
+                date: document.getElementById('pay-date').value,
+                note: document.getElementById('pay-note').value
+            });
+
+            saveData();
+            modals.payment.hide();
+            renderAccount();
+        };
+
+        // ========== الإعدادات ==========
+        function renderSettings() {
+            document.getElementById('set-price').value = db.settings.price;
+            document.getElementById('set-trans-mult').value = db.settings.transMult;
+            document.getElementById('set-main-mult').value = db.settings.mainMult;
+        }
+
+        window.saveSettings = function() {
+            db.settings.price = parseFloat(document.getElementById('set-price').value) || 1900;
+            db.settings.transMult = parseFloat(document.getElementById('set-trans-mult').value) || 1000;
+            db.settings.mainMult = parseFloat(document.getElementById('set-main-mult').value) || 200;
+            
+            saveData();
+            alert('تم حفظ الإعدادات');
+        };
+
+        // ========== التصدير والنسخ الاحتياطي ==========
+        window.exportBackup = function() {
+            const dataStr = JSON.stringify(db, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `نسخة_كهرباء_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        window.importBackup = function() {
+            const file = document.getElementById('backup-file').files[0];
+            if (!file) {
+                alert('الرجاء اختيار ملف');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    db = imported;
+                    saveData();
+                    alert('تم استعادة البيانات بنجاح');
+                    location.reload();
+                } catch (err) {
+                    alert('الملف غير صالح');
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        window.exportFullMonthlyReport = function() {
+            const mId = document.getElementById('month-select').value;
+            const month = db.months.find(m => m.id === mId);
+            if (!month) return;
+
+            const subsList = calculateCurrentMonth();
+            if (!subsList) return;
+
+            let rows = '';
+            let total = 0;
+
+            subsList.forEach(item => {
+                total += item.amount;
+                rows += `<tr>
+                    <td>${item.sub.name}</td>
+                    <td>${item.curr}</td>
+                    <td>${item.prev}</td>
+                    <td>${formatNum(item.cons)}</td>
+                    <td class="text-danger fw-bold">${formatMoney(item.amount)}</td>
+                </tr>`;
+            });
+
+            const html = `
+                <h3 class="text-center mb-4">تقرير شهر ${month.name}</h3>
+                <table class="table table-bordered">
+                    <thead class="table-dark">
+                        <tr><th>المشترك</th><th>الحالية</th><th>السابقة</th><th>الاستهلاك</th><th>المبلغ</th></tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                    <tfoot class="table-warning">
+                        <tr><td colspan="4" class="text-end fw-bold">الإجمالي</td><td class="fw-bold text-danger">${formatMoney(total)}</td></tr>
+                    </tfoot>
+                </table>
+            `;
+
+            showUnifiedExport(html, `تقرير_${month.name}.pdf`);
+        };
+
+        window.exportSingleReading = function(subId, monthId) {
+            const sub = db.subscribers.find(s => s.id === subId);
+            const month = db.months.find(m => m.id === monthId);
+            const reading = db.readings.find(r => r.monthId === monthId && r.subId === subId);
+            
+            if (!sub || !month || !reading) return;
+
+            const html = `
+                <h3 class="text-center mb-4">فاتورة كهرباء</h3>
+                <div class="row mb-3">
+                    <div class="col-6"><strong>المشترك:</strong> ${sub.name}</div>
+                    <div class="col-6"><strong>الشهر:</strong> ${month.name}</div>
+                    <div class="col-6"><strong>القراءة الحالية:</strong> ${reading.curr}</div>
+                    <div class="col-6"><strong>القراءة السابقة:</strong> ${reading.prev}</div>
+                    <div class="col-6"><strong>الاستهلاك:</strong> ${formatNum(reading.cons)} ك.و</div>
+                    <div class="col-6"><strong>المبلغ:</strong> ${formatMoney(reading.amount)} ل.س</div>
+                </div>
+            `;
+
+            showUnifiedExport(html, `فاتورة_${sub.name}_${month.name}.pdf`);
+        };
+
+        window.exportAccountStatement = function() {
+            const subId = document.getElementById('acc-sub-select').value;
+            const sub = db.subscribers.find(s => s.id === subId);
+            if (!sub) return;
+
+            const balance = getSubBalance(sub.id);
+            const html = `
+                <h3 class="text-center mb-4">كشف حساب ${sub.name}</h3>
+                <div class="alert alert-info">
+                    الرصيد الحالي: ${formatMoney(balance)} ل.س
+                </div>
+                <div id="account-print-content">${document.getElementById('acc-tbody').innerHTML}</div>
+            `;
+
+            showUnifiedExport(html, `كشف_حساب_${sub.name}.pdf`);
+        };
+
+        function showUnifiedExport(html, filename) {
+            document.getElementById('unifiedPreviewBody').innerHTML = html;
+            currentExportPayload = { html, filename };
+            modals.unified.show();
+        }
+
+        // PDF Export
+        document.getElementById('btn-export-pdf')?.addEventListener('click', function() {
+            const element = document.getElementById('unifiedPreviewBody');
+            html2pdf().from(element).save(currentExportPayload.filename || 'document.pdf');
+        });
+
+        // Print
+        document.getElementById('btn-export-print')?.addEventListener('click', function() {
+            window.print();
+        });
+
+        // WhatsApp
+        document.getElementById('btn-export-whatsapp')?.addEventListener('click', function() {
+            const text = encodeURIComponent('تفاصيل من نظام المحاسب Pro');
+            window.open(`https://wa.me/?text=${text}`, '_blank');
+        });
+
+        // ========== التهيئة النهائية ==========
+        window.onload = function() {
+            showPage('dashboard');
+            document.getElementById('pay-date').valueAsDate = new Date();
+            
+            // التحقق من وجود البيانات
+            if (!db.subscribers) db.subscribers = [];
+            if (!db.months) db.months = [];
+            if (!db.readings) db.readings = [];
+            if (!db.payments) db.payments = [];
+            
+            saveData();
+        };
+    </script>
+</body>
+</html>
